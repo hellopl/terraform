@@ -9,8 +9,8 @@ locals {
 data "aws_availability_zones" "available" {}
 
 resource "aws_vpc" "main" {
-    cidr_block = var.vpc_cidr
-    assign_generated_ipv6_cidr_block = true 
+    cidr_block                          = var.vpc_cidr
+    assign_generated_ipv6_cidr_block    = true 
     tags = {
         Name = "${var.env}-vpc"
     }
@@ -18,6 +18,9 @@ resource "aws_vpc" "main" {
 
 resource "aws_egress_only_internet_gateway" "main" {
     vpc_id = aws_vpc.main.id
+    tags = {
+        Name = "${var.env}-eigw-for-IPv6-private-App"
+    }
 }
 
 resource "aws_internet_gateway" "main" {
@@ -33,9 +36,9 @@ resource "aws_subnet" "public_subnets" {
     count                       = length(var.public_subnet_cidrs)
     vpc_id                      = aws_vpc.main.id
     cidr_block                  = element(var.public_subnet_cidrs, count.index)
-#    ipv6_cidr_block             = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index)
+    ipv6_cidr_block             = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index + 11)
     availability_zone           = data.aws_availability_zones.available.names[0]
-    map_public_ip_on_launch = true
+    map_public_ip_on_launch     = true
     tags = {
         Name = "${var.env}-Public-subnet-${element(local.alphabet, count.index)}"
     }
@@ -44,12 +47,12 @@ resource "aws_subnet" "public_subnets" {
 resource "aws_route_table" "public_subnets" {
     vpc_id = aws_vpc.main.id
     route {
-        cidr_block = "0.0.0.0/0"
-        gateway_id = aws_internet_gateway.main.id
+        cidr_block          = "0.0.0.0/0"
+        gateway_id          = aws_internet_gateway.main.id
     }
     route {
-        ipv6_cidr_block        = "::/0"
-        gateway_id = aws_internet_gateway.main.id
+        ipv6_cidr_block     = "::/0"
+        gateway_id          = aws_internet_gateway.main.id
     }
     tags = {
             Name = "${var.env}-route-Public-subnets"
@@ -85,7 +88,7 @@ resource "aws_subnet" "private_subnets" {
     count                       = length(var.private_subnet_cidrs)
     vpc_id                      = aws_vpc.main.id
     cidr_block                  = element(var.private_subnet_cidrs, count.index)
-#    ipv6_cidr_block             = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 4, count.index)
+    ipv6_cidr_block             = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index + 21)
     availability_zone           = data.aws_availability_zones.available.names[0]
     tags = {
         Name = "${var.env}-private-App-subnet-${element(local.alphabet, count.index)}"
